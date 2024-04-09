@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.14.2/matter.min.js"
+      integrity="sha512-pi0tSRZdlNRZeANPwdAIHRAYg6gZZV6QlAiyHXn5TYqLzBKE9jlttO/QgYLMhISD6oNv2kPsVelx+n5nw0FqKA=="
+      crossorigin="anonymous"
+    ></script>
+
+    <title>Document</title>
+    <style>
+      body {
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        background-color: #000000 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        overflow: hidden;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: bold;
+        color: ffb800;
+      }
+
+      .score {
+        position: absolute;
+        top: 30px;
+        left: 30px;
+        color: white;
+      }
+
+      .timer {
+        position: absolute;
+        top: 30px;
+        right: 30px;
+        color: white;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="score">0</div>
+    <div class="timer"><span class="second">Màn 2</span></div>
+    <script>
+      var Engine = Matter.Engine,
+        Render = Matter.Render,
+        World = Matter.World,
+        Bodies = Matter.Bodies,
+        Constraint = Matter.Constraint,
+        Body = Matter.Body,
+        Events = Matter.Events,
+        Bounds = Matter.Bounds,
+        Pair = Matter.Pair;
+
+      // create an engine
+      var engine = Engine.create();
+
+      // create a renderer
+      var render = Render.create({
+        element: document.body,
+        engine: engine,
+        options: {
+          height: 667,
+          wireframes: false,
+          hasBounds: true,
+        },
+      });
+
+      console.log(render.bounds);
+
+      // create two boxes and a ground
+      var ground = Bodies.rectangle(400, 1050, 2000, 160, {
+        isStatic: true,
+      });
+
+      World.add(engine.world, [ground]);
+
+      // add all of the bodies to the world
+
+      // function createBlock() {
+
+      var score = 0;
+      // var hangPoint = Bodies.circle(375 / 2, 20, 10, {
+      //     isStatic: true
+      // })
+      // hangPoint.render.fillStyle = "#ffb800";
+      var timeOutID;
+      var intervalID;
+      var box = [];
+      var hangPoint = [];
+      var constraint;
+      var boxIndex = 0;
+      var hangPointCurrentHeight = 500;
+      var scoreDisplay = document.querySelector(".score");
+      var secondDisplay = document.querySelector(".second");
+      var timer = 7;
+
+      function createBlock() {
+        if (timeOutID) {
+          clearTimeout(timeOutID);
+        }
+        Events.off(engine, "beforeTick");
+
+        secondDisplay.textContent = "Màn 2";
+        intervalID = setInterval(() => {
+          timer = timer - 1;
+          if (timer < 1) {
+            gameOver();
+          }
+        }, 1000);
+
+        //// create box
+        let boxCurrent = Bodies.rectangle(300, hangPointCurrentHeight, 20, 40);
+        boxCurrent.render.fillStyle = "#ffb800";
+        boxCurrent.frictionAir = 0;
+        boxCurrent.restitution = 0;
+        console.log(boxCurrent);
+        box.push(boxCurrent);
+        /// create hangpoint
+        let hangPointCurrent = Bodies.circle(
+          375 / 2,
+          hangPointCurrentHeight,
+          10,
+          {
+            isStatic: true,
+          }
+        );
+        hangPointCurrent.render.fillStyle = "#ffb800";
+        hangPoint.push(hangPointCurrent);
+
+        /////create constraint
+        constraint = Constraint.create({
+          bodyA: hangPointCurrent,
+          bodyB: boxCurrent,
+        });
+
+        ////add to the world
+        World.add(engine.world, [boxCurrent, hangPointCurrent, constraint]);
+
+        ///handle score
+        boxIndex++;
+        score++;
+        hangPointCurrentHeight -= 30;
+        console.log(score - 1);
+        ///
+        Bounds.shift(render.bounds, {
+          x: hangPoint[boxIndex - 1].position.x - 375 / 2,
+          y: hangPoint[boxIndex - 1].position.y - 100,
+        });
+      }
+
+      function dropBlock() {
+        clearInterval(intervalID);
+        World.remove(engine.world, [constraint, hangPoint[boxIndex - 1]]);
+
+        Body.setVelocity(box[boxIndex - 1], {
+          x: 0,
+          y: 0,
+        });
+        scoreDisplay.textContent = `${score}/5`;
+        if (score > 5) {
+          alert("Màn 3 thì shaoooo!");
+          location.href = "./boxgame-round3.html";
+        }
+
+        Events.on(engine, "beforeTick", () => {
+          if (
+            box[boxIndex - 1].position.y - hangPoint[boxIndex - 1].position.y >
+            500
+          ) {
+            Bounds.shift(render.bounds, {
+              x: hangPoint[boxIndex - 1].position.x - 375 / 2,
+              y: box[boxIndex - 1].position.y - 500,
+            });
+          }
+        });
+      }
+      // create first block
+      createBlock();
+
+      var clickListener = document.body.addEventListener("click", dropBlock);
+
+      // run the engine
+      Engine.run(engine);
+
+      // run the renderer
+      Render.run(render);
+      var hitGround = 0;
+
+      Events.on(engine, "collisionStart", (e) => {
+        ///debouce
+        if (timeOutID) {
+          clearTimeout(timeOutID);
+        }
+        let groundHit = e.pairs[0].bodyA.isStatic;
+
+        ///check if lost
+        if (groundHit) {
+          hitGround++;
+        }
+        if (hitGround > 1) {
+          gameOver();
+        } else {
+          if (timer > 0) {
+            timeOutID = setTimeout(createBlock, 1200); //// if collistioin Ends
+          }
+        }
+      });
+
+      function gameOver() {
+        box.forEach((i) => {
+          i.render.fillStyle = "#ccc";
+        });
+        scoreDisplay.textContent = "GAME OVER";
+        clearInterval(intervalID);
+        clearTimeout(timeOutID);
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        document.body.removeEventListener("click", dropBlock);
+      }
+    </script>
+  </body>
+</html>
