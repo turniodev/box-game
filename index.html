@@ -41,8 +41,8 @@
   </head>
 
   <body>
-    <div class="score">Score:0</div>
-    <div class="timer">00:0<span class="second">5</span></div>
+    <div class="score">0</div>
+    <div class="timer"><span class="second">Màn 1</span></div>
     <script>
       var Engine = Matter.Engine,
         Render = Matter.Render,
@@ -95,6 +95,7 @@
       var hangPointCurrentHeight = 500;
       var scoreDisplay = document.querySelector(".score");
       var secondDisplay = document.querySelector(".second");
+      var timer = 7;
 
       function createBlock() {
         if (timeOutID) {
@@ -102,10 +103,10 @@
         }
         Events.off(engine, "beforeTick");
 
-        secondDisplay.textContent = "10";
+        secondDisplay.textContent = "Màn 1";
         intervalID = setInterval(() => {
-          secondDisplay.textContent = secondDisplay.textContent - 1;
-          if (secondDisplay.textContent < 1) {
+          timer = timer - 1;
+          if (timer < 1) {
             gameOver();
           }
         }, 1000);
@@ -158,7 +159,11 @@
           x: 0,
           y: 0,
         });
-        scoreDisplay.textContent = "Score:" + score;
+        scoreDisplay.textContent = `${score}/8`;
+        if (score > 8) {
+          alert("GHÊ ZẬY MÁ!!! QUA MÀN 2 CHƠI I");
+          location.href = "./index.html";
+        }
 
         Events.on(engine, "beforeTick", () => {
           if (
@@ -198,7 +203,7 @@
         if (hitGround > 1) {
           gameOver();
         } else {
-          if (secondDisplay.textContent > 0) {
+          if (timer > 0) {
             timeOutID = setTimeout(createBlock, 1200); //// if collistioin Ends
           }
         }
@@ -208,7 +213,7 @@
         box.forEach((i) => {
           i.render.fillStyle = "#ccc";
         });
-        scoreDisplay.textContent = "score:" + score + " GAME OVER";
+        scoreDisplay.textContent = "GAME OVER";
         clearInterval(intervalID);
         clearTimeout(timeOutID);
         setTimeout(() => {
